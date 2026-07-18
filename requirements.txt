@@ -1,0 +1,45 @@
+# Video processing
+moviepy
+opencv-python
+
+# Audio processing
+pydub
+ffmpeg-python
+
+# Speech-to-text
+openai-whisper
+
+# NLP / Summarization
+transformers
+torch
+sentencepiece
+
+# OpenAI API (optional)
+openai
+
+# Utilities
+numpy
+pandas
+tqdm
+
+# Web API / UI
+fastapi
+uvicorn
+python-multipart
+pydantic
+
+# Environment variables
+python-dotenv
+
+# Optional text processing
+nltk
+
+# Langchain & Models
+langchain
+langchain-mistralai
+langchain-ollama
+langchain-core
+langchain-community
+langchain-chroma
+chromadb
+yt-dlp

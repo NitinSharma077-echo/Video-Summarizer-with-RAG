@@ -1,0 +1,75 @@
+# ==========================
+# Environment Variables
+# ==========================
+.env
+.env.*
+
+# ==========================
+# Python
+# ==========================
+__pycache__/
+*.py[cod]
+*$py.class
+
+uploads/
+*.mp4
+*.wav
+*.env
+__pycache__/
+venv/
+# Virtual Environment
+venv/
+.venv/
+env/
+ENV/
+
+# ==========================
+# IDE / Editor
+# ==========================
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# ==========================
+# Logs
+# ==========================
+*.log
+
+# ==========================
+# Build & Distribution
+# ==========================
+build/
+dist/
+*.egg-info/
+
+# ==========================
+# OS Files
+# ==========================
+.DS_Store
+Thumbs.db
+
+# ==========================
+# Project Data
+# ==========================
+downloads/
+uploads/
+vector_store/
+
+# If you have large datasets
+data/
+
+# SQLite Databases
+*.db
+
+# ==========================
+# Jupyter
+# ==========================
+.ipynb_checkpoints/
+
+# ==========================
+# Testing
+# ==========================
+.pytest_cache/
+.coverage
+htmlcov/
