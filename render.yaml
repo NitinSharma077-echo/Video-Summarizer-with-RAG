@@ -1,0 +1,22 @@
+services:
+  # FastAPI Backend Service
+  - type: web
+    name: video-summarizer-backend
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: MISTRAL_API_KEY
+        sync: false
+      - key: HF_TOKEN
+        sync: false
+      - key: MISTRAL_MODEL
+        value: mistral-small-latest
+
+  # React + Vite Frontend Static Site
+  - type: web
+    name: video-summarizer-frontend
+    env: static
+    rootDir: frontend
+    buildCommand: npm install && npm run build
+    staticPublishPath: build
