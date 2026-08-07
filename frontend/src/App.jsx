@@ -1,8 +1,10 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import {
   Bot,
   CheckCircle,
+  Download,
+  FileDown,
   FileText,
   Link,
   List,
@@ -21,6 +23,7 @@ function App() {
   const [mode, setMode] = useState('upload');
   const [url, setUrl] = useState('');
   const [file, setFile] = useState(null);
+  const [previewUrl, setPreviewUrl] = useState('');
   const [dragActive, setDragActive] = useState(false);
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState(null);
@@ -28,6 +31,12 @@ function App() {
   const [chatQuery, setChatQuery] = useState('');
   const [chatHistory, setChatHistory] = useState([]);
   const [chatLoading, setChatLoading] = useState(false);
+
+  useEffect(() => {
+    return () => {
+      if (previewUrl) URL.revokeObjectURL(previewUrl);
+    };
+  }, [previewUrl]);
 
   const resetResult = () => {
     setData(null);
@@ -39,6 +48,10 @@ function App() {
     const selected = files?.[0];
     if (!selected) return;
     setFile(selected);
+    setPreviewUrl((current) => {
+      if (current) URL.revokeObjectURL(current);
+      return URL.createObjectURL(selected);
+    });
     resetResult();
   };
 
@@ -224,7 +237,31 @@ function App() {
                 <a href="#video-chat" className="secondary-btn">
                   Ask the video
                 </a>
+                <a
+                  href={`${API_URL}/download/transcript`}
+                  className="secondary-btn"
+                  download
+                  title="Download the transcript, summary, and highlights as a PDF"
+                >
+                  <FileDown size={16} />
+                  Download transcript (PDF)
+                </a>
+                {data.media_available && (
+                  <a
+                    href={`${API_URL}/download/media`}
+                    className="secondary-btn"
+                    download
+                    title="Download the original video/audio file"
+                  >
+                    <Download size={16} />
+                    Download video/audio
+                  </a>
+                )}
               </div>
+
+              {previewUrl && mode === 'upload' && (
+                <video className="video-preview" src={previewUrl} controls />
+              )}
 
               <ResultSection icon={FileText} title="Summary" content={data.summary} />
               <ResultSection icon={List} title="Key Points" content={data.key_points} />

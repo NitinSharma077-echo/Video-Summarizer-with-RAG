@@ -1,26 +1,17 @@
-# Video processing
-moviepy
-opencv-python
-
-# Audio processing
-pydub
-ffmpeg-python
-
 # Speech-to-text
 openai-whisper
 
-# NLP / Summarization
-transformers
-torch
-sentencepiece
+# Audio processing (ffmpeg binary is required separately, see Dockerfile)
+pydub
 
-# OpenAI API (optional)
-openai
+# Embeddings (used by langchain_community.embeddings.HuggingFaceEmbeddings)
+sentence-transformers
+
+# PDF generation (transcript + report downloads)
+reportlab
 
 # Utilities
 numpy
-pandas
-tqdm
 
 # Web API / UI
 fastapi
@@ -31,15 +22,16 @@ pydantic
 # Environment variables
 python-dotenv
 
-# Optional text processing
-nltk
-
 # Langchain & Models
 langchain
 langchain-mistralai
 langchain-ollama
 langchain-core
+langchain-text-splitters
 langchain-community
 langchain-chroma
 chromadb
 yt-dlp
+
+# OpenAI-compatible client (optional providers)
+openai

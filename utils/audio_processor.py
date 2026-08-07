@@ -214,11 +214,11 @@ def create_wav_chunks(input_path: str, chunk_minutes: int = 5):
         raise RuntimeError("No audio chunks were created from the video.")
     return chunks
     
-def process_start(source:str):
+def process_start(source: str):
     parsed_source = urlparse(source)
     if parsed_source.scheme in {"http", "https"}:
-        audio_path=download_youtube_audio(source)
+        audio_path = download_youtube_audio(source)
     else:
-        audio_path=source
-    return create_wav_chunks(audio_path)
+        audio_path = source
+    return audio_path, create_wav_chunks(audio_path)
     

@@ -43,7 +43,13 @@ def _installed_ollama_models() -> set[str]:
     return {model.get("name", "") for model in payload.get("models", [])}
 
 
+def _ollama_disabled() -> bool:
+    return os.getenv("DISABLE_OLLAMA", "false").strip().lower() in {"1", "true", "yes"}
+
+
 def _select_ollama_model() -> str | None:
+    if _ollama_disabled():
+        return None
     installed_models = _installed_ollama_models()
     if not installed_models:
         return None

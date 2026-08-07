@@ -63,6 +63,8 @@ def generate_title(transcript:str):
                 - Keep it concise and engaging.
                 - Do not add any information not present in the transcript.
                 - Use clear, professional language.
+                - Reply with the title only, as plain text.
+                - Do not use markdown formatting (no **, #, etc.) and do not wrap it in quotes.
                 """),
                 ("user","""Here is the transcript. Please create a catchy and informative title:
                 {transcript}
@@ -70,5 +72,6 @@ def generate_title(transcript:str):
             ]
         )|llm|StrOutputParser()
     )
-    return title_chain.invoke({"transcript": transcript[:MAX_TITLE_CHARS]})
+    raw_title = title_chain.invoke({"transcript": transcript[:MAX_TITLE_CHARS]})
+    return raw_title.strip().strip("*#").strip().strip('"').strip("'").strip()
 

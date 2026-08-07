@@ -1,6 +1,8 @@
 from fastapi import FastAPI, HTTPException, UploadFile, File
+from fastapi.responses import FileResponse, StreamingResponse
 from pydantic import BaseModel
 import os
+import re
 import shutil
 from pathlib import Path
 from uuid import uuid4
@@ -12,6 +14,7 @@ from config.translator import summarize, generate_title
 from config.extractor import extract_action_items, extract_key_moments, extract_key_points
 from config.vector_store import build_vector_store
 from config.ragEngine import rag_answer
+from config.pdf_export import build_transcript_pdf
 from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI()
@@ -19,7 +22,7 @@ app = FastAPI()
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
-    allow_credentials=True,
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -35,12 +38,26 @@ class VideoRequest(BaseModel):
 class ChatRequest(BaseModel):
     query: str
 
-global_transcript = ""
 UPLOAD_DIR = Path("uploads")
 UPLOAD_DIR.mkdir(exist_ok=True)
 ALLOWED_EXTENSIONS = {
     ".mp4", ".mov", ".mkv", ".avi", ".webm", ".m4v",
     ".mp3", ".wav", ".m4a", ".aac", ".flac", ".ogg",
+}
+AUDIO_EXTENSIONS = {".mp3", ".wav", ".m4a", ".aac", ".flac", ".ogg"}
+
+# Single active-session state: this is a single-tenant demo app, so the most
+# recently analyzed video/audio is what /chat, /download/transcript and
+# /download/media operate on.
+SESSION = {
+    "title": "",
+    "transcript": "",
+    "summary": "",
+    "action_items": "",
+    "key_moments": "",
+    "key_points": "",
+    "media_path": None,
+    "media_name": None,
 }
 
 
@@ -54,15 +71,27 @@ def validate_extension(filename: str, allowed_extensions: Iterable[str] = ALLOWE
     return suffix
 
 
-def analyze_source(source: str):
+def _safe_filename(name: str) -> str:
+    name = re.sub(r"[^\w\-. ]", "_", name or "video").strip() or "video"
+    return name[:120]
+
+
+def analyze_source(source: str, media_path: str = None, media_name: str = None):
     parsed_source = urlparse(source)
     transcript = None
     if parsed_source.scheme in {"http", "https"}:
         transcript = get_youtube_transcript(source)
 
     if not transcript:
-        chunks = process_start(source)
+        audio_path, chunks = process_start(source)
         transcript = transcribe_all(chunks)
+        # process_start() downloads YouTube audio to disk when captions are
+        # unavailable, so that file becomes the downloadable media too.
+        if media_path is None and parsed_source.scheme in {"http", "https"} and os.path.exists(audio_path):
+            media_path = audio_path
+
+    if not transcript or not transcript.strip():
+        raise ValueError("Could not extract any speech from this source. Try a different file or URL.")
 
     title = generate_title(transcript)
     summary = summarize(transcript)
@@ -72,29 +101,39 @@ def analyze_source(source: str):
 
     build_vector_store(transcript)
 
+    SESSION.update(
+        title=title,
+        transcript=transcript,
+        summary=summary,
+        action_items=action_items,
+        key_moments=key_moments,
+        key_points=key_points,
+        media_path=media_path,
+        media_name=media_name or (os.path.basename(media_path) if media_path else None),
+    )
+
     return {
         "title": title,
         "transcript": transcript,
         "summary": summary,
         "action_items": action_items,
         "key_moments": key_moments,
-        "key_points": key_points
+        "key_points": key_points,
+        "media_available": bool(media_path and os.path.exists(media_path)),
     }
 
 @app.post("/process")
 def process_video(request: VideoRequest):
-    global global_transcript
     try:
-        result = analyze_source(request.url)
-        global_transcript = result["transcript"]
-        return result
+        return analyze_source(request.url)
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
 
 @app.post("/upload")
 def upload_video(file: UploadFile = File(...)):
-    global global_transcript
     suffix = validate_extension(file.filename or "")
     upload_path = (UPLOAD_DIR / f"{uuid4().hex}{suffix}").resolve()
     try:
@@ -103,9 +142,11 @@ def upload_video(file: UploadFile = File(...)):
         if upload_path.stat().st_size == 0:
             raise HTTPException(status_code=400, detail="Uploaded file is empty.")
 
-        result = analyze_source(str(upload_path))
-        global_transcript = result["transcript"]
-        return result
+        return analyze_source(
+            str(upload_path),
+            media_path=str(upload_path),
+            media_name=_safe_filename(file.filename or upload_path.name),
+        )
     except HTTPException:
         raise
     except Exception as e:
@@ -113,11 +154,47 @@ def upload_video(file: UploadFile = File(...)):
 
 @app.post("/chat")
 def chat(request: ChatRequest):
+    if not SESSION["transcript"]:
+        raise HTTPException(status_code=400, detail="Process a video or audio file first.")
     try:
         answer = rag_answer(request.query)
         return {"answer": answer}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/download/transcript")
+def download_transcript():
+    if not SESSION["transcript"]:
+        raise HTTPException(status_code=404, detail="No transcript available yet. Process a video first.")
+
+    buffer = build_transcript_pdf(
+        title=SESSION["title"],
+        transcript=SESSION["transcript"],
+        summary=SESSION["summary"],
+        key_points=SESSION["key_points"],
+        action_items=SESSION["action_items"],
+        key_moments=SESSION["key_moments"],
+    )
+    filename = f"{_safe_filename(SESSION['title'] or 'transcript')}.pdf"
+    return StreamingResponse(
+        buffer,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
+@app.get("/download/media")
+def download_media():
+    media_path = SESSION["media_path"]
+    if not media_path or not os.path.exists(media_path):
+        raise HTTPException(
+            status_code=404,
+            detail="No downloadable video/audio for this session (captions-only URL analysis doesn't store media).",
+        )
+    filename = SESSION["media_name"] or os.path.basename(media_path)
+    return FileResponse(media_path, filename=filename, media_type="application/octet-stream")
+
 
 if __name__ == "__main__":
     import uvicorn

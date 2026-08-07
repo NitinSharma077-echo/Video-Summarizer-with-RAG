@@ -55,6 +55,7 @@ Thumbs.db
 downloads/
 uploads/
 vector_store/
+model/
 
 # If you have large datasets
 data/

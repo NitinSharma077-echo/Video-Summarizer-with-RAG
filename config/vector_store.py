@@ -13,7 +13,7 @@ os.makedirs(vector_path,exist_ok=True)
 def get_embedding():
     return HuggingFaceEmbeddings(
         model_name=EMBEDDING_MODEL,
-        model_kwargs={"cache_folder": "./model"}
+        cache_folder="./model",
     )
     
 def build_vector_store(transcript:str):
@@ -27,6 +27,19 @@ def build_vector_store(transcript:str):
         for i,chunk in enumerate(chunks)
     ]
     embeddings=get_embedding()
+
+    # Reset any previously stored collection first so chunks from an
+    # earlier video/audio file don't bleed into this session's RAG answers.
+    try:
+        existing=Chroma(
+            persist_directory=CHROMA_PATH,
+            embedding_function=embeddings,
+            collection_name=COLLECTION_NAME,
+        )
+        existing.delete_collection()
+    except Exception:
+        pass
+
     vector_store=Chroma.from_documents(
         documents=docs,
         embedding=embeddings,
