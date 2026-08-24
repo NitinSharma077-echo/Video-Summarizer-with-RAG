@@ -34,6 +34,9 @@ function App() {
   const [chatHistory, setChatHistory] = useState([]);
   const [chatLoading, setChatLoading] = useState(false);
 
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [processingStage, setProcessingStage] = useState('');
+
   useEffect(() => {
     return () => {
       if (previewUrl) URL.revokeObjectURL(previewUrl);
@@ -44,6 +47,8 @@ function App() {
     setData(null);
     setChatHistory([]);
     setError('');
+    setUploadProgress(0);
+    setProcessingStage('');
   };
 
   const handleEndConversation = async () => {
@@ -61,6 +66,8 @@ function App() {
       setPreviewUrl('');
     }
     setError('');
+    setUploadProgress(0);
+    setProcessingStage('');
   };
 
   const handleFiles = (files) => {
@@ -83,6 +90,7 @@ function App() {
   const handleProcess = async (event) => {
     event.preventDefault();
     setError('');
+    setUploadProgress(0);
 
     if (mode === 'upload' && !file) {
       setError('Choose a video or audio file first.');
@@ -95,6 +103,7 @@ function App() {
     }
 
     setLoading(true);
+    setProcessingStage(mode === 'upload' ? 'Starting upload...' : 'Fetching & processing video URL...');
     try {
       const response =
         mode === 'upload'
@@ -106,13 +115,27 @@ function App() {
       setError(err.response?.data?.detail || err.message || 'Could not process this video.');
     } finally {
       setLoading(false);
+      setUploadProgress(0);
+      setProcessingStage('');
     }
   };
 
   const uploadFile = (selectedFile) => {
     const formData = new FormData();
     formData.append('file', selectedFile);
-    return axios.post(`${API_URL}/upload`, formData);
+    return axios.post(`${API_URL}/upload`, formData, {
+      onUploadProgress: (progressEvent) => {
+        if (progressEvent.total) {
+          const percent = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+          setUploadProgress(percent);
+          if (percent < 100) {
+            setProcessingStage(`Uploading file (${percent}%)...`);
+          } else {
+            setProcessingStage('Transcribing with OpenAI & extracting insights...');
+          }
+        }
+      },
+    });
   };
 
   const handleChat = async (event) => {
@@ -238,7 +261,14 @@ function App() {
         {loading && (
           <section className="loading-state">
             <LoaderCircle className="loading-icon spin" />
-            <p>Extracting audio, transcribing, and building your video knowledge base...</p>
+            <div className="loading-details">
+              <p>{processingStage || 'Extracting audio, transcribing, and building your video knowledge base...'}</p>
+              {uploadProgress > 0 && uploadProgress < 100 && (
+                <div className="progress-bar-container">
+                  <div className="progress-bar-fill" style={{ width: `${uploadProgress}%` }} />
+                </div>
+              )}
+            </div>
           </section>
         )}
 

@@ -255,6 +255,31 @@ input {
   color: var(--muted);
 }
 
+.loading-details {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.loading-details p {
+  margin: 0;
+}
+
+.progress-bar-container {
+  width: 100%;
+  height: 6px;
+  background: #111722;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.progress-bar-fill {
+  height: 100%;
+  background: var(--accent);
+  transition: width 200ms ease;
+}
+
 .loading-icon {
   color: var(--accent);
   flex: 0 0 auto;

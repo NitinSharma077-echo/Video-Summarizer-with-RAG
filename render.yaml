@@ -1,7 +1,6 @@
 services:
   # FastAPI Backend Service — Docker build so ffmpeg (required by pydub and
-  # for chunking uploaded video/audio) is guaranteed to be present. Whisper
-  # and the embedding model are baked into the image at build time.
+  # for chunking uploaded video/audio) is guaranteed to be present.
   - type: web
     name: video-summarizer-backend
     env: docker
@@ -9,6 +8,18 @@ services:
     dockerContext: .
     healthCheckPath: /health
     envVars:
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: OPENAI_MODEL
+        value: gpt-4o-mini
+      - key: OPENAI_EMBEDDING_MODEL
+        value: text-embedding-3-small
+      - key: CHROMA_API_KEY
+        sync: false
+      - key: CHROMA_TENANT
+        value: 52fb452f-1e38-40f1-a701-d99c7dd5eecc
+      - key: CHROMA_DATABASE
+        value: RAG
       - key: MISTRAL_API_KEY
         sync: false
       - key: HF_TOKEN
@@ -23,9 +34,7 @@ services:
   # React + Vite Frontend Static Site
   # IMPORTANT: Vite bakes VITE_* vars in at build time. After the backend's
   # first deploy, copy its actual onrender.com URL from the Render dashboard
-  # (it may get a random suffix if the exact name is taken) and update the
-  # value below, then redeploy the frontend so the build picks it up. The
-  # frontend calls `${VITE_API_URL}/upload`, `/process`, `/chat`, etc.
+  # and set VITE_API_URL, then redeploy the frontend.
   - type: web
     name: video-summarizer-frontend
     env: static
