@@ -2,7 +2,7 @@ services:
   # FastAPI Backend Service — Docker build so ffmpeg (required by pydub and
   # for chunking uploaded video/audio) is guaranteed to be present.
   - type: web
-    name: video-summarizer-backend
+    name: video-summarizer-with-rag-backend1
     env: docker
     dockerfilePath: ./Dockerfile
     dockerContext: .
@@ -32,9 +32,6 @@ services:
         value: "true"
 
   # React + Vite Frontend Static Site
-  # IMPORTANT: Vite bakes VITE_* vars in at build time. After the backend's
-  # first deploy, copy its actual onrender.com URL from the Render dashboard
-  # and set VITE_API_URL, then redeploy the frontend.
   - type: web
     name: video-summarizer-frontend
     env: static
@@ -43,7 +40,7 @@ services:
     staticPublishPath: build
     envVars:
       - key: VITE_API_URL
-        value: https://video-summarizer-backend.onrender.com
+        value: https://video-summarizer-with-rag-backend1.onrender.com
     routes:
       - type: rewrite
         source: /*
