@@ -1,6 +1,5 @@
 import os
 from openai import OpenAI
-import whisper
 
 whisper_model = os.getenv("WHISPER_MODEL", "base")
 _model = None
@@ -9,7 +8,11 @@ _model = None
 def load_local_model():
     global _model
     if _model is None:
-        _model = whisper.load_model(whisper_model)
+        try:
+            import whisper
+            _model = whisper.load_model(whisper_model)
+        except ImportError:
+            raise RuntimeError("Local whisper is not installed. Please set OPENAI_API_KEY in your environment for cloud transcription.")
     return _model
 
 
@@ -31,7 +34,7 @@ def transcribe_chunk(chunk_path: str, translate: bool = False) -> dict:
                     )
                 return {"text": response.text}
         except Exception as e:
-            print(f"OpenAI Whisper API notice: {e}. Falling back to local Whisper model.")
+            print(f"OpenAI Whisper API notice: {e}. Attempting fallback to local model...")
 
     model = load_local_model()
     result = model.transcribe(chunk_path, task="transcribe" if not translate else "translate")

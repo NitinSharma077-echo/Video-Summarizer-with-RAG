@@ -3,7 +3,6 @@ import chromadb
 from dotenv import load_dotenv
 from langchain_chroma import Chroma
 from langchain_openai import OpenAIEmbeddings
-from langchain_community.embeddings import HuggingFaceEmbeddings
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_core.documents import Document
 
@@ -23,11 +22,15 @@ def get_embedding():
             model=embedding_model,
             api_key=openai_api_key,
         )
-    embedding_model = os.getenv("EMBEDDING_MODEL", "all-MiniLM-L6-v2")
-    return HuggingFaceEmbeddings(
-        model_name=embedding_model,
-        cache_folder="./model",
-    )
+    try:
+        from langchain_community.embeddings import HuggingFaceEmbeddings
+        embedding_model = os.getenv("EMBEDDING_MODEL", "all-MiniLM-L6-v2")
+        return HuggingFaceEmbeddings(
+            model_name=embedding_model,
+            cache_folder="./model",
+        )
+    except Exception as e:
+        raise RuntimeError(f"OpenAI API key missing and local embeddings not available: {e}")
 
 
 def get_chroma_client():

@@ -1,39 +1,24 @@
-# Speech-to-text
-openai-whisper
-
-# Audio processing (ffmpeg binary is required separately, see Dockerfile)
+# Audio processing
 pydub
+yt-dlp
 
-# Embeddings (used by langchain_community.embeddings.HuggingFaceEmbeddings)
-sentence-transformers
-
-# PDF generation (transcript + report downloads)
+# PDF generation
 reportlab
 
-# Utilities
+# Utilities & Web API
 numpy
-
-# Web API / UI
 fastapi
 uvicorn
 python-multipart
 pydantic
-
-# Environment variables
 python-dotenv
 
-# Langchain & Models
+# OpenAI & Langchain & Chroma
+openai
 langchain
 langchain-openai
-langchain-mistralai
-langchain-ollama
 langchain-core
 langchain-text-splitters
 langchain-community
 langchain-chroma
 chromadb
-yt-dlp
-
-# OpenAI-compatible client (optional providers)
-openai
-
