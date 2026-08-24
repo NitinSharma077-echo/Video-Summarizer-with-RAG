@@ -4,6 +4,7 @@ import urllib.error
 import urllib.request
 
 from dotenv import load_dotenv
+from langchain_openai import ChatOpenAI
 from langchain_mistralai import ChatMistralAI
 from langchain_ollama import ChatOllama
 
@@ -18,6 +19,7 @@ DEFAULT_OLLAMA_MODELS = (
     "qwen2.5:7b",
     "gemma3:4b",
     "gemma:4b",
+    "phi4-mini:latest",
 )
 
 
@@ -74,6 +76,15 @@ def _select_ollama_model() -> str | None:
 
 
 def get_llm():
+    openai_api_key = (os.getenv("OPENAI_API_KEY") or "").strip()
+    if openai_api_key and openai_api_key != "YOUR_API_KEY":
+        model_name = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
+        return ChatOpenAI(
+            model=model_name,
+            api_key=openai_api_key,
+            temperature=0.2,
+        )
+
     ollama_model = _select_ollama_model()
     if ollama_model:
         return ChatOllama(
@@ -82,8 +93,16 @@ def get_llm():
             temperature=0.2,
         )
 
-    mistral_model = os.getenv("MISTRAL_MODEL", "mistral-small-latest")
-    return ChatMistralAI(
-        model=mistral_model,
+    mistral_api_key = (os.getenv("MISTRAL_API_KEY") or "").strip()
+    if mistral_api_key:
+        mistral_model = os.getenv("MISTRAL_MODEL", "mistral-small-latest")
+        return ChatMistralAI(
+            model=mistral_model,
+            api_key=mistral_api_key,
+            temperature=0.2,
+        )
+
+    return ChatOpenAI(
+        model=os.getenv("OPENAI_MODEL", "gpt-4o-mini"),
         temperature=0.2,
     )

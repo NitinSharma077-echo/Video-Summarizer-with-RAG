@@ -58,7 +58,7 @@ def download_youtube_audio(url: str) -> Optional[str]:
         "postprocessors":[
             {
                 "key":"FFmpegExtractAudio",
-                "preferredcodec":"mp3",
+                "preferredcodec":"mp4A",
                 "preferredquality":"192"
             }
         ],

@@ -10,7 +10,9 @@ import {
   List,
   LoaderCircle,
   MessageSquare,
+  RotateCcw,
   Send,
+  Trash2,
   UploadCloud,
   Video,
   X,
@@ -41,6 +43,23 @@ function App() {
   const resetResult = () => {
     setData(null);
     setChatHistory([]);
+    setError('');
+  };
+
+  const handleEndConversation = async () => {
+    try {
+      await axios.post(`${API_URL}/reset`);
+    } catch (err) {
+      console.error('Failed to clear session on backend:', err);
+    }
+    setData(null);
+    setChatHistory([]);
+    setFile(null);
+    setUrl('');
+    if (previewUrl) {
+      URL.revokeObjectURL(previewUrl);
+      setPreviewUrl('');
+    }
     setError('');
   };
 
@@ -231,8 +250,9 @@ function App() {
                   <span className="eyebrow">Analysis complete</span>
                   <h2>{data.title || 'Video analysis results'}</h2>
                 </div>
-                <button type="button" onClick={resetResult} className="secondary-btn">
-                  Analyze another
+                <button type="button" onClick={handleEndConversation} className="secondary-btn dangerous-btn" title="Clear transcript and delete vector database collection for a new conversation">
+                  <Trash2 size={16} />
+                  End Conversation & New Session
                 </button>
                 <a href="#video-chat" className="secondary-btn">
                   Ask the video

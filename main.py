@@ -12,7 +12,7 @@ from config.transcriber import transcribe_all
 from utils.audio_processor import get_youtube_transcript, process_start
 from config.translator import summarize, generate_title
 from config.extractor import extract_action_items, extract_key_moments, extract_key_points
-from config.vector_store import build_vector_store
+from config.vector_store import build_vector_store, delete_vector_store
 from config.ragEngine import rag_answer
 from config.pdf_export import build_transcript_pdf
 from fastapi.middleware.cors import CORSMiddleware
@@ -161,6 +161,24 @@ def chat(request: ChatRequest):
         return {"answer": answer}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/reset")
+@app.post("/clear")
+def reset_session():
+    delete_vector_store()
+    SESSION.update(
+        title="",
+        transcript="",
+        summary="",
+        action_items="",
+        key_moments="",
+        key_points="",
+        media_path=None,
+        media_name=None,
+    )
+    return {"status": "success", "message": "Conversation and vector database cleared for new session."}
+
 
 
 @app.get("/download/transcript")

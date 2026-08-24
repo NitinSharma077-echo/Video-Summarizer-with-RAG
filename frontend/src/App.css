@@ -205,6 +205,15 @@ input {
   padding: 10px 14px;
 }
 
+.secondary-btn.dangerous-btn {
+  border-color: rgba(255, 122, 122, 0.4);
+  color: var(--danger);
+}
+
+.secondary-btn.dangerous-btn:hover {
+  background: rgba(255, 122, 122, 0.15);
+}
+
 .submit-btn {
   display: flex;
   min-height: 52px;

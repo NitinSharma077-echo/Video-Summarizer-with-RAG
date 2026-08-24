@@ -24,6 +24,7 @@ python-dotenv
 
 # Langchain & Models
 langchain
+langchain-openai
 langchain-mistralai
 langchain-ollama
 langchain-core
@@ -35,3 +36,4 @@ yt-dlp
 
 # OpenAI-compatible client (optional providers)
 openai
+
