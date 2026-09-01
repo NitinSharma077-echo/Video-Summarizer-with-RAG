@@ -5,8 +5,6 @@ import urllib.request
 
 from dotenv import load_dotenv
 from langchain_openai import ChatOpenAI
-from langchain_mistralai import ChatMistralAI
-from langchain_ollama import ChatOllama
 
 load_dotenv()
 
@@ -87,20 +85,29 @@ def get_llm():
 
     ollama_model = _select_ollama_model()
     if ollama_model:
-        return ChatOllama(
-            model=ollama_model,
-            base_url=_ollama_base_url(),
-            temperature=0.2,
-        )
+        try:
+            from langchain_ollama import ChatOllama
+        except ImportError:
+            print("Notice: langchain-ollama is not installed; skipping Ollama fallback.")
+        else:
+            return ChatOllama(
+                model=ollama_model,
+                base_url=_ollama_base_url(),
+                temperature=0.2,
+            )
 
     mistral_api_key = (os.getenv("MISTRAL_API_KEY") or "").strip()
     if mistral_api_key:
-        mistral_model = os.getenv("MISTRAL_MODEL", "mistral-small-latest")
-        return ChatMistralAI(
-            model=mistral_model,
-            api_key=mistral_api_key,
-            temperature=0.2,
-        )
+        try:
+            from langchain_mistralai import ChatMistralAI
+        except ImportError:
+            print("Notice: langchain-mistralai is not installed; skipping Mistral fallback.")
+        else:
+            return ChatMistralAI(
+                model=os.getenv("MISTRAL_MODEL", "mistral-small-latest"),
+                api_key=mistral_api_key,
+                temperature=0.2,
+            )
 
     return ChatOpenAI(
         model=os.getenv("OPENAI_MODEL", "gpt-4o-mini"),

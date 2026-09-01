@@ -58,7 +58,7 @@ def download_youtube_audio(url: str) -> Optional[str]:
         "postprocessors":[
             {
                 "key":"FFmpegExtractAudio",
-                "preferredcodec":"mp4A",
+                "preferredcodec":"mp3",
                 "preferredquality":"192"
             }
         ],
@@ -214,6 +214,15 @@ def create_wav_chunks(input_path: str, chunk_minutes: int = 5):
         raise RuntimeError("No audio chunks were created from the video.")
     return chunks
     
+def cleanup_chunks(chunks):
+    """Remove the temporary wav chunks written for transcription."""
+    for chunk_path in chunks or []:
+        try:
+            os.remove(chunk_path)
+        except OSError:
+            pass
+
+
 def process_start(source: str):
     parsed_source = urlparse(source)
     if parsed_source.scheme in {"http", "https"}:

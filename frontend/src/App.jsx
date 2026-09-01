@@ -10,7 +10,6 @@ import {
   List,
   LoaderCircle,
   MessageSquare,
-  RotateCcw,
   Send,
   Trash2,
   UploadCloud,
@@ -19,7 +18,29 @@ import {
 } from 'lucide-react';
 import './App.css';
 
-const API_URL = import.meta.env.VITE_API_URL || '/api';
+// Where the FastAPI backend lives.
+// 1. An explicit VITE_API_URL (build-time env / .env.production) always wins.
+// 2. On localhost we use the Vite dev-server proxy at "/api".
+// 3. A deployed frontend (…onrender.com) talks to the paired backend service
+//    directly, so the hosted build still works even if VITE_API_URL was not
+//    injected at build time.
+const resolveApiBase = () => {
+  const explicit = (import.meta.env.VITE_API_URL || '').trim();
+  if (explicit) return explicit.replace(/\/+$/, '');
+
+  if (typeof window !== 'undefined') {
+    const { hostname } = window.location;
+    if (hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '0.0.0.0') {
+      return '/api';
+    }
+    if (hostname.endsWith('.onrender.com')) {
+      return 'https://video-summarizer-with-rag-backend1.onrender.com';
+    }
+  }
+  return '/api';
+};
+
+const API_URL = resolveApiBase();
 
 function App() {
   const [mode, setMode] = useState('upload');

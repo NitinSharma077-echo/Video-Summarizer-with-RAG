@@ -33,22 +33,40 @@ def get_embedding():
         raise RuntimeError(f"OpenAI API key missing and local embeddings not available: {e}")
 
 
+_UNSET = object()
+_chroma_client_cache = _UNSET
+
+
 def get_chroma_client():
+    # Cached: creating a CloudClient opens a fresh connection to Chroma, and
+    # this is called several times per request (build/load/delete).
+    global _chroma_client_cache
+    if _chroma_client_cache is not _UNSET:
+        return _chroma_client_cache
+
     api_key = (os.getenv("CHROMA_API_KEY") or os.getenv("Vector_DB") or "").strip()
     tenant = (os.getenv("CHROMA_TENANT") or "52fb452f-1e38-40f1-a701-d99c7dd5eecc").strip()
     database = (os.getenv("CHROMA_DATABASE") or "RAG").strip()
 
-    if api_key and api_key != "YOUR_API_KEY":
-        try:
-            return chromadb.CloudClient(
-                api_key=api_key,
-                tenant=tenant,
-                database=database,
-            )
-        except Exception as e:
-            print(f"Warning: Failed to connect to Chroma CloudClient ({e}). Falling back to local persistent store.")
-            return None
-    return None
+    if not api_key or api_key == "YOUR_API_KEY":
+        # No cloud credentials -> always use the local persistent store.
+        _chroma_client_cache = None
+        return None
+
+    try:
+        client = chromadb.CloudClient(
+            api_key=api_key,
+            tenant=tenant,
+            database=database,
+        )
+    except Exception as e:
+        # Transient network/auth blip: don't cache, so the next request retries
+        # instead of being stuck on the local store for the whole process life.
+        print(f"Warning: Failed to connect to Chroma CloudClient ({e}). Falling back to local persistent store.")
+        return None
+
+    _chroma_client_cache = client
+    return client
 
 
 def delete_vector_store():
@@ -61,8 +79,9 @@ def delete_vector_store():
         if client:
             try:
                 client.delete_collection(COLLECTION_NAME)
-            except Exception:
-                pass
+            except Exception as e:
+                # Raised when the collection doesn't exist yet -> nothing to drop.
+                print(f"Note: Chroma collection '{COLLECTION_NAME}' not deleted ({e}).")
         else:
             embeddings = get_embedding()
             vs = Chroma(

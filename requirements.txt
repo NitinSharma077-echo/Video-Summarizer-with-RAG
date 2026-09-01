@@ -17,6 +17,8 @@ python-dotenv
 openai
 langchain
 langchain-openai
+langchain-mistralai
+langchain-ollama
 langchain-core
 langchain-text-splitters
 langchain-community

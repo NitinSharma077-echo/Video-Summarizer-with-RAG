@@ -33,12 +33,15 @@ services:
 
   # React + Vite Frontend Static Site
   - type: web
-    name: video-summarizer-frontend
+    name: video-summarizer-with-rag
     env: static
     rootDir: frontend
     buildCommand: npm install && npm run build
     staticPublishPath: build
     envVars:
+      # Baked into the bundle at build time. frontend/.env.production carries the
+      # same value so a plain `vite build` also works; the app additionally
+      # falls back to the *.onrender.com backend at runtime if neither is set.
       - key: VITE_API_URL
         value: https://video-summarizer-with-rag-backend1.onrender.com
     routes:

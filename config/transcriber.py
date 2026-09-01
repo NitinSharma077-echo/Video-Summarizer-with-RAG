@@ -1,7 +1,9 @@
 import os
+from dotenv import load_dotenv
 from openai import OpenAI
 
-whisper_model = os.getenv("WHISPER_MODEL", "base")
+load_dotenv()
+
 _model = None
 
 
@@ -10,7 +12,7 @@ def load_local_model():
     if _model is None:
         try:
             import whisper
-            _model = whisper.load_model(whisper_model)
+            _model = whisper.load_model(os.getenv("WHISPER_MODEL", "base"))
         except ImportError:
             raise RuntimeError("Local whisper is not installed. Please set OPENAI_API_KEY in your environment for cloud transcription.")
     return _model

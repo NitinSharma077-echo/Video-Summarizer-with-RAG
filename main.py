@@ -9,7 +9,7 @@ from uuid import uuid4
 from typing import Iterable
 from urllib.parse import urlparse
 from config.transcriber import transcribe_all
-from utils.audio_processor import get_youtube_transcript, process_start
+from utils.audio_processor import cleanup_chunks, get_youtube_transcript, process_start
 from config.translator import summarize, generate_title
 from config.extractor import extract_action_items, extract_key_moments, extract_key_points
 from config.vector_store import build_vector_store, delete_vector_store
@@ -40,6 +40,9 @@ class ChatRequest(BaseModel):
 
 UPLOAD_DIR = Path("uploads")
 UPLOAD_DIR.mkdir(exist_ok=True)
+DOWNLOAD_DIR = Path("downloads")
+# Directories whose media files we own and may delete when a new video arrives.
+MANAGED_MEDIA_DIRS = (UPLOAD_DIR.resolve(), DOWNLOAD_DIR.resolve())
 ALLOWED_EXTENSIONS = {
     ".mp4", ".mov", ".mkv", ".avi", ".webm", ".m4v",
     ".mp3", ".wav", ".m4a", ".aac", ".flac", ".ogg",
@@ -76,6 +79,32 @@ def _safe_filename(name: str) -> str:
     return name[:120]
 
 
+def _cleanup_previous_media(keep_path: str = None):
+    """Delete the previous session's downloaded/uploaded media file.
+
+    Called whenever a new video/audio is analyzed so old files don't pile up on
+    disk between sessions. Only touches files inside our own uploads/downloads
+    directories, and never the file we're about to keep.
+    """
+    old_path = SESSION.get("media_path")
+    if not old_path:
+        return
+    try:
+        resolved = Path(old_path).resolve()
+        keep = Path(keep_path).resolve() if keep_path else None
+    except (OSError, RuntimeError, ValueError):
+        return
+    if keep is not None and resolved == keep:
+        return
+    for base in MANAGED_MEDIA_DIRS:
+        try:
+            if resolved == base or base in resolved.parents:
+                resolved.unlink(missing_ok=True)
+                return
+        except (OSError, ValueError):
+            continue
+
+
 def analyze_source(source: str, media_path: str = None, media_name: str = None):
     parsed_source = urlparse(source)
     transcript = None
@@ -84,7 +113,10 @@ def analyze_source(source: str, media_path: str = None, media_name: str = None):
 
     if not transcript:
         audio_path, chunks = process_start(source)
-        transcript = transcribe_all(chunks)
+        try:
+            transcript = transcribe_all(chunks)
+        finally:
+            cleanup_chunks(chunks)
         # process_start() downloads YouTube audio to disk when captions are
         # unavailable, so that file becomes the downloadable media too.
         if media_path is None and parsed_source.scheme in {"http", "https"} and os.path.exists(audio_path):
@@ -100,6 +132,9 @@ def analyze_source(source: str, media_path: str = None, media_name: str = None):
     key_points = extract_key_points(transcript)
 
     build_vector_store(transcript)
+
+    # New video indexed successfully -> drop the previous session's media file.
+    _cleanup_previous_media(keep_path=media_path)
 
     SESSION.update(
         title=title,
@@ -148,8 +183,10 @@ def upload_video(file: UploadFile = File(...)):
             media_name=_safe_filename(file.filename or upload_path.name),
         )
     except HTTPException:
+        upload_path.unlink(missing_ok=True)
         raise
     except Exception as e:
+        upload_path.unlink(missing_ok=True)
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/chat")
@@ -167,6 +204,7 @@ def chat(request: ChatRequest):
 @app.post("/clear")
 def reset_session():
     delete_vector_store()
+    _cleanup_previous_media()
     SESSION.update(
         title="",
         transcript="",

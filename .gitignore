@@ -3,6 +3,8 @@
 # ==========================
 .env
 .env.*
+# ...but keep the non-secret production API URL for the frontend build.
+!frontend/.env.production
 
 # ==========================
 # Python
